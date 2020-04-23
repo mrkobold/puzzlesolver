@@ -12,10 +12,8 @@ import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-import static program.Const.ONE;
 import static program.Const.PADDING;
 import static program.Const.TO_BE_VISITED;
-import static program.Const.ZERO;
 
 public class Main {
 
@@ -56,7 +54,7 @@ public class Main {
         for (int row = 1; row < height - 1; row++) {
             for (int col = 1; col < width - 1; col++) {
                 // visit a piece and gather it into "piece"
-                if (img[row][col] == ONE) {
+                if (img[row][col] == 255) {
                     List<Position> piece = new ArrayList<>();
                     Stack<Position> stack = new Stack<>();
                     stack.add(new Position(row, col));
@@ -83,35 +81,35 @@ public class Main {
                             maxx = x;
                         }
                         // flood-fill piece
-                        if (img[y - 1][x - 1] == ONE) {
+                        if (img[y - 1][x - 1] == 255) {
                             stack.add(new Position(y - 1, x - 1));
                             img[y - 1][x - 1] = TO_BE_VISITED;
                         }
-                        if (img[y - 1][x] == ONE) {
+                        if (img[y - 1][x] == 255) {
                             stack.add(new Position(y - 1, x));
                             img[y - 1][x] = TO_BE_VISITED;
                         }
-                        if (img[y - 1][x + 1] == ONE) {
+                        if (img[y - 1][x + 1] == 255) {
                             stack.add(new Position(y - 1, x + 1));
                             img[y - 1][x + 1] = TO_BE_VISITED;
                         }
-                        if (img[y][x - 1] == ONE) {
+                        if (img[y][x - 1] == 255) {
                             stack.add(new Position(y, x - 1));
                             img[y][x - 1] = TO_BE_VISITED;
                         }
-                        if (img[y][x + 1] == ONE) {
+                        if (img[y][x + 1] == 255) {
                             stack.add(new Position(y, x + 1));
                             img[y][x + 1] = TO_BE_VISITED;
                         }
-                        if (img[y + 1][x - 1] == ONE) {
+                        if (img[y + 1][x - 1] == 255) {
                             stack.add(new Position(y + 1, x - 1));
                             img[y + 1][x - 1] = TO_BE_VISITED;
                         }
-                        if (img[y + 1][x] == ONE) {
+                        if (img[y + 1][x] == 255) {
                             stack.add(new Position(y + 1, x));
                             img[y + 1][x] = TO_BE_VISITED;
                         }
-                        if (img[y + 1][x + 1] == ONE) {
+                        if (img[y + 1][x + 1] == 255) {
                             stack.add(new Position(y + 1, x + 1));
                             img[y + 1][x + 1] = TO_BE_VISITED;
                         }
@@ -120,18 +118,16 @@ public class Main {
                     int[][] pieceArray = new int[maxy - miny + PADDING][maxx - minx + PADDING];
                     for (int i = 0; i < pieceArray.length; i++) {
                         for (int j = 0; j < pieceArray[0].length; j++) {
-                            pieceArray[i][j] = ZERO;
+                            pieceArray[i][j] = 0;
                         }
                     }
                     for (Position p : piece) {
-                        pieceArray[p.y - miny + PADDING / 2][p.x - minx + PADDING / 2] = ONE;
+                        pieceArray[p.y - miny + PADDING / 2][p.x - minx + PADDING / 2] = 255;
                     }
                     objects.add(new Piece(pieceArray));
                 }
             }
         }
-
-
         return objects;
     }
 
@@ -142,14 +138,14 @@ public class Main {
 
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
-                if (image[row][col] == ONE &&
-                        (image[row - 1][col] == ZERO ||
-                                image[row][col - 1] == ZERO ||
-                                image[row][col + 1] == ZERO ||
-                                image[row + 1][col] == ZERO)) {
-                    edges[row][col] = ONE;
+                if (image[row][col] == 255 &&
+                        (image[row - 1][col] == 0 ||
+                                image[row][col - 1] == 0 ||
+                                image[row][col + 1] == 0 ||
+                                image[row + 1][col] == 0)) {
+                    edges[row][col] = 255;
                 } else {
-                    edges[row][col] = ZERO;
+                    edges[row][col] = 0;
                 }
             }
         }
@@ -164,16 +160,16 @@ public class Main {
         for (int row = 1; row < height - 1; row++) {
             for (int col = 1; col < width - 1; col++) {
                 int val;
-                byte n = binary[row - 1][col] == ONE ? (byte) 1 : (byte) 0;
-                byte e = binary[row][col + 1] == ONE ? (byte) 1 : (byte) 0;
-                byte s = binary[row + 1][col] == ONE ? (byte) 1 : (byte) 0;
-                byte w = binary[row][col - 1] == ONE ? (byte) 1 : (byte) 0;
+                byte n = binary[row - 1][col] == 255 ? (byte) 1 : (byte) 0;
+                byte e = binary[row][col + 1] == 255 ? (byte) 1 : (byte) 0;
+                byte s = binary[row + 1][col] == 255 ? (byte) 1 : (byte) 0;
+                byte w = binary[row][col - 1] == 255 ? (byte) 1 : (byte) 0;
                 byte sum = (byte) (n + e + s + w);
 
-                if (binary[row][col] == ONE && sum < 2) {
-                    val = ZERO;
-                } else if (binary[row][col] == ZERO && sum > 2) {
-                    val = ONE;
+                if (binary[row][col] == 255 && sum < 2) {
+                    val = 0;
+                } else if (binary[row][col] == 0 && sum > 2) {
+                    val = 255;
                 } else {
                     val = binary[row][col];
                 }
@@ -190,7 +186,7 @@ public class Main {
 
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
-                binaryPixels[row][col] = (greyScale[row][col] & 0x000000ff) > 150 ? ONE : ZERO;
+                binaryPixels[row][col] = greyScale[row][col] > 150 ? 255 : 0;
             }
         }
         return binaryPixels;
@@ -210,7 +206,7 @@ public class Main {
                 int blue = pixelOriginal & 0x000000ff;
                 int colorMean = (red + green + blue) / 3;
 
-                grayScalePixels[row][col] = colorMean << 16 | colorMean << 8 | colorMean;
+                grayScalePixels[row][col] = colorMean;
             }
         }
         return grayScalePixels;
@@ -242,20 +238,23 @@ public class Main {
     }
 
     private static void showImage(int[][] pixels) throws InterruptedException {
+        int height = pixels.length;
+        int width = pixels[0].length;
+
         JFrame frame = new JFrame("preview");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(pixels[0].length + 100, pixels.length + 100);
         frame.setVisible(true);
         Graphics g = frame.getGraphics();
         Thread.sleep(100);
+        g.fillRect(0, 0, width, height);
 
-        int height = pixels.length;
-        int width = pixels[0].length;
-
+        g.setColor(Color.WHITE);
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
-                g.setColor(new Color(pixels[row][col]));
-                g.drawLine(col + 20, row + 60, col + 20, row + 60);
+                if (pixels[row][col] == 255) {
+                    g.drawLine(col + 20, row + 60, col + 20, row + 60);
+                }
             }
         }
     }

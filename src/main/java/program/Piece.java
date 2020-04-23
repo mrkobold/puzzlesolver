@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.Arrays;
 
-import static program.Const.ONE;
 import static program.Const.SLOPE_COMPUTE_LENGTH;
 import static program.Const.dirs;
 
@@ -165,7 +164,7 @@ class Piece {
         boolean found_s = false;
         for (int y = 0; y < height && !found_s; y++) {
             for (int x = 0; x < width && !found_s; x++) {
-                if (img[y][x] == ONE) {
+                if (img[y][x] == 255) {
                     s_y = y;
                     s_x = x;
                     found_s = true;
@@ -178,7 +177,7 @@ class Piece {
 
         int dir = 0;
         int n_y = s_y, n_x = s_x; // next pixel
-        while (img[n_y][n_x] != ONE || (n_y == p_y && n_x == p_x)) {
+        while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x)) {
             n_y = s_y + dirs[dir][0];
             n_x = s_x + dirs[dir][1];
             dir = (dir + 1) % 8;
@@ -196,13 +195,13 @@ class Piece {
             c_x = n_x;
 
             // collect data
-            img_cleansed[c_y][c_x] = ONE;
+            img_cleansed[c_y][c_x] = 255;
             img_walkk[curr_pix][0] = c_y;
             img_walkk[curr_pix][1] = c_x;
             curr_pix++;
             // collected data
 
-            while (img[n_y][n_x] != ONE || (n_y == p_y && n_x == p_x) || (n_y == c_y && n_x == c_x)) {
+            while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x) || (n_y == c_y && n_x == c_x)) {
                 n_y = c_y + dirs[dir][0];
                 n_x = c_x + dirs[dir][1];
                 dir = (dir + 1) % 8;

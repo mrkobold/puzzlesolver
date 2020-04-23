@@ -2,10 +2,8 @@ package program;
 
 public class Const {
 
-    static final int ZERO = 0x00000000;
-    static final int ONE = 0xffffffff;
-    static final int VISITED = 0x00000004;
-    static final int TO_BE_VISITED = 0x00000005;
+    static final int VISITED = 4;
+    static final int TO_BE_VISITED = 5;
 
     static final int PADDING = 20;
 
