@@ -24,11 +24,11 @@ class Piece {
         width = img[0].length;
     }
 
-    void draw_curves() throws Exception {
+    void draw_curves() {
         Graphics g = createFrame("Curves");
 
         int n = img_walk.length;
-        int L = 10;
+        int L = 15;
         Color c = Color.GREEN;
         for (int i = 0; i < n; i++) {
             int id_p = i - L;
@@ -39,15 +39,21 @@ class Piece {
                 id_n -= n;
             }
 
-            if (slopes[id_p] < slopes[i] && slopes[i] < slopes[id_n] ||
-                    slopes[id_p + 3 * L / 4] < slopes[i] && slopes[i] < slopes[id_n - 3 * L / 4]) {
+            double dp_m = slopes[i] - slopes[id_p];
+            double dn_m = slopes[id_n] - slopes[i];
+
+            double straight_threshold = 0.3;
+            if (Math.abs(dp_m) < straight_threshold && Math.abs(dn_m) < straight_threshold) {
+                c = Color.WHITE;
+            } else if (dp_m > 0 && dn_m > 0) {
                 c = Color.GREEN;
-            } else if (slopes[id_p] > slopes[i] && slopes[i] > slopes[id_n] ||
-                    slopes[id_p + 3 * L / 4] > slopes[i] && slopes[i] > slopes[id_n - 3 * L / 4]) {
+            } else if (dp_m < 0 && dn_m < 0) {
                 c = Color.BLUE;
             }
+
             g.setColor(c);
-            g.drawOval(img_walk[i][1], img_walk[i][0], 1, 1);
+//            g.drawOval(img_walk[i][1], img_walk[i][0], 1, 1);
+            g.drawLine(img_walk[i][1], img_walk[i][0], img_walk[i][1], img_walk[i][0]);
         }
     }
 
@@ -133,7 +139,7 @@ class Piece {
 
             int l = width / 10;
             int steps = width / 8;
-            if (i % steps == 0) {
+            if ((i + 20) % steps == 0) {
                 int y_c = img_walk[i][0];
                 int x_c = img_walk[i][1];
 
@@ -212,19 +218,23 @@ class Piece {
         slopes = new double[curr_pix];
     }
 
-    private Graphics createFrame(String text) throws InterruptedException {
-        JFrame frame = new JFrame(text);
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setUndecorated(true);
-        frame.setSize(width, height);
-        frame.setVisible(true);
-        Thread.sleep(100);
-        Graphics g = frame.getGraphics();
-        Thread.sleep(100);
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, width, height);
-        g.setColor(Color.GREEN);
-        g.drawString(text, 10, 10);
-        return g;
+    private Graphics createFrame(String text) {
+        try {
+            JFrame frame = new JFrame(text);
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+//        frame.setUndecorated(true);
+            frame.setSize(width, height);
+            frame.setVisible(true);
+            Thread.sleep(100);
+            Graphics g = frame.getGraphics();
+            Thread.sleep(100);
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, width, height);
+            g.setColor(Color.GREEN);
+            g.drawString(text, 10, 10);
+            return g;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
