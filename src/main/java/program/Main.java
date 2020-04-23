@@ -20,7 +20,7 @@ import static program.Const.ZERO;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        BufferedImage img = ImageIO.read(new File("photos/resized3.jpg"));
+        BufferedImage img = ImageIO.read(new File("photos/resized2.jpg"));
 
         int[][] pixels = getPixelsRGB(img);
         int[][] grayScale = getGrayScale(pixels);
@@ -28,17 +28,19 @@ public class Main {
         int[][] cleansed = getCleansed(binary);
         int[][] edges = getEdges(cleansed);
 
+        showImage(binary);
+
         List<Piece> pieces = getObjects(edges);
 
         // filter out pimples
         double avg_perimeter = pieces.stream().mapToInt(p -> p.img.length).average().orElseThrow(() -> new Exception("WTF?? No perimeter of pieces exists??"));
         pieces = pieces.stream().filter(p -> p.img.length > avg_perimeter / 3).collect(Collectors.toList());
 
-        pieces.get(0).walk();
-        pieces.get(0).compute_slopes();
-        pieces.get(0).draw_slopes();
+//        pieces.get(0).walk();
+//        pieces.get(0).compute_slopes();
+//        pieces.get(0).draw_curves();
+//        pieces.get(1).draw_slopes();
 
-        pieces.get(0).draw_curves();
     }
 
     private static List<Piece> getObjects(int[][] img) {

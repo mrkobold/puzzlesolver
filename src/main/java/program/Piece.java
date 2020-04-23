@@ -26,6 +26,88 @@ class Piece {
 
     void draw_curves() throws Exception {
         Graphics g = createFrame("Curves");
+
+        int n = img_walk.length;
+        int L = 10;
+        Color c = Color.GREEN;
+        for (int i = 0; i < n; i++) {
+            int id_p = i - L;
+            if (id_p < 0)
+                id_p += n;
+            int id_n = i + L;
+            if (id_n > n - 1) {
+                id_n -= n;
+            }
+
+            if (slopes[id_p] < slopes[i] && slopes[i] < slopes[id_n] ||
+                    slopes[id_p + 3 * L / 4] < slopes[i] && slopes[i] < slopes[id_n - 3 * L / 4]) {
+                c = Color.GREEN;
+            } else if (slopes[id_p] > slopes[i] && slopes[i] > slopes[id_n] ||
+                    slopes[id_p + 3 * L / 4] > slopes[i] && slopes[i] > slopes[id_n - 3 * L / 4]) {
+                c = Color.BLUE;
+            }
+            g.setColor(c);
+            g.drawOval(img_walk[i][1], img_walk[i][0], 1, 1);
+        }
+    }
+
+    void draw_curves_3points_angles_approach() throws Exception {
+        Graphics g = createFrame("Curves");
+
+        int n = img_walk.length;
+        int L = 10;
+        for (int i = 0; i < n; i++) {
+            int p_id = i < L ? i + n - L : i - L;
+            int p_y = img_walk[p_id][0];
+            int p_x = img_walk[p_id][1];
+
+            int c_y = img_walk[i][0];
+            int c_x = img_walk[i][1];
+
+            int n_id = i + L > n - 1 ? i + L - n : i + L;
+            int n_y = img_walk[n_id][0];
+            int n_x = img_walk[n_id][1];
+
+            double m_p = ((double) c_y - (double) p_y) / ((double) c_x - (double) p_x);
+            double m_n = ((double) n_y - (double) c_y) / ((double) n_x - (double) c_x);
+
+            double a1 = Math.atan(m_p);
+            double a2 = Math.atan(m_n);
+
+            Color c = a2 < a1 ? Color.GREEN : Color.RED;
+
+            g.setColor(c);
+            g.drawOval(c_x, c_y, 1, 1);
+        }
+    }
+
+    void draw_curves_slopes_approach() throws Exception {
+        Graphics g = createFrame("Curves");
+
+        int L = 50;
+        for (int i = 0; i < img_walk.length; i++) {
+            int y = img_walk[i][0];
+            int x = img_walk[i][1];
+
+            int y_p = img_walk[(i - L + img_walk.length) % img_walk.length][0];
+            int x_p = img_walk[(i - L + img_walk.length) % img_walk.length][1];
+            double m = slopes[(i - L + img_walk.length) % img_walk.length];
+
+            int d;
+            if (x_p < x) {
+                d = (int) (y + (y_p + (x - x_p) * m));
+            } else {
+                d = (int) (y - (y_p + (x_p - x) * m));
+            }
+
+            int add = (int) (Math.atan(d) / (Math.PI * 2) * 125) + 125;
+            int green = add;
+            int blue = 255 - add;
+            Color c = new Color(125, green, blue);
+
+            g.setColor(c);
+            g.drawOval(x, y, 1, 1);
+        }
     }
 
     void draw_slopes() throws InterruptedException {
