@@ -22,7 +22,8 @@ public class Main {
 
         int[][] pixels = getPixelsRGB(img);
         int[][] grayScale = getGrayScale(pixels);
-        int[][] binary = getBinary(grayScale);
+        int[][] blurred = getBlurred(grayScale);
+        int[][] binary = getBinary(blurred);
         int[][] cleansed = getCleansed(binary);
         int[][] edges = getEdges(cleansed);
 
@@ -35,15 +36,22 @@ public class Main {
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::compute_slopes);
         pieces.forEach(Piece::draw_curves);
+    }
 
-        int piece_id = 1;
-//        pieces.get(piece_id).walk();
-//        pieces.get(piece_id).compute_slopes();
-//        pieces.get(piece_id).damp_slopes();
+    private static int[][] getBlurred(int[][] img) {
+        int h = img.length;
+        int w = img[0].length;
+        int[][] result = new int[h][w];
 
-//        pieces.get(piece_id).draw_curves();
-//        pieces.get(piece_id).draw_slopes();
-
+        for (int y = 1; y < h - 1; y++) {
+            for (int x = 1; x < w - 1; x++) {
+                result[y][x] = img[y - 1][x - 1] + 2 * img[y - 1][x] + img[y - 1][x + 1] +
+                        2 * img[y][x - 1] + 4 * img[y][x] + 2 * img[y][x + 1] +
+                        img[y + 1][x - 1] + 2 * img[y + 1][x] + img[y + 1][x + 1];
+                result[y][x] /= 16;
+            }
+        }
+        return result;
     }
 
     private static List<Piece> getObjects(int[][] img) {
