@@ -33,9 +33,15 @@ public class Main {
         double avg_perimeter = pieces.stream().mapToInt(p -> p.img.length).average().orElseThrow(() -> new Exception("WTF?? No perimeter of pieces exists??"));
         pieces = pieces.stream().filter(p -> p.img.length > avg_perimeter / 3).collect(Collectors.toList());
 
+//        pieces.remove(1);
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::compute_slopes);
-        pieces.forEach(Piece::draw_curves);
+        pieces.forEach(Piece::compute_delta_slopes);
+//        pieces.forEach(Piece::draw_slopes);
+//        pieces.forEach(Piece::draw_slopes);
+//        pieces.forEach(Piece::draw_curves_based_on_slopes_avg);
+//        pieces.forEach(Piece::draw_curves_based_on_sudden_slopes_change);
+        pieces.forEach(Piece::draw_corners_based_on_sum_d2_length);
     }
 
     private static int[][] getBlurred(int[][] img) {

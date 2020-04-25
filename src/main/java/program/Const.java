@@ -7,7 +7,5 @@ public class Const {
 
     static final int PADDING = 20;
 
-    static final int SLOPE_COMPUTE_LENGTH = 20;
-
     static final int[][] dirs = new int[][]{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
 }

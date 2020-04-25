@@ -6,13 +6,16 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.Arrays;
 
-import static program.Const.SLOPE_COMPUTE_LENGTH;
+import static java.lang.Math.abs;
+import static java.lang.Math.min;
+import static java.lang.Math.sqrt;
 import static program.Const.dirs;
 
 class Piece {
     int[][] corners = new int[4][2];
     int height, width;
     double[] slopes;
+    double[] delta_slopes;
 
     int[][] img;
     int[][] img_walk;
@@ -23,12 +26,60 @@ class Piece {
         width = img[0].length;
     }
 
+    /**
+     * draw curves based on normalized distance sum (d^2) / length
+     */
+    void draw_corners_based_on_sum_d2_length() {
+        Graphics g = createFrame("corners based on normalized distance sum");
+
+        int CHECK_DISTANCE = 20;
+        double NORM_D_THRESHOLD = 2.8;
+
+        int n = img_walk.length;
+        for (int i = 0; i < img_walk.length; i++) {
+            double a_y = (double) img_walk[i][0];
+            double a_x = (double) img_walk[i][1];
+
+            double d_y = (double) img_walk[(i + CHECK_DISTANCE) % n][0];
+            double d_x = (double) img_walk[(i + CHECK_DISTANCE) % n][1];
+
+            double line_length = sqrt((d_y - a_y) * (d_y - a_y) + (d_x - a_x) * (d_x - a_x));
+            double m = d_x == a_x ? 0 : (d_y - a_y) / (d_x - a_x);
+
+            double distance_sum = 0;
+            for (int j = i; j <= i + CHECK_DISTANCE; j++) {
+                double c_y = (double) img_walk[j % n][0];
+                double c_x = (double) img_walk[j % n][1];
+
+                double b_x = (m) / (m * m + 1) * (c_y + 1 / m * c_x - a_y + m * a_x);
+                double b_y = a_y + m * (b_x - a_x);
+
+                double dist_squared = sqrt((c_x - b_x) * (c_x - b_x) + (c_y - b_y) * (c_y - b_y));
+                distance_sum += dist_squared;
+            }
+
+            double normalized_distance_sum = distance_sum / line_length;
+            Color c;
+            if (normalized_distance_sum > NORM_D_THRESHOLD) {
+                c = Color.RED;
+            } else {
+                c = Color.WHITE;
+            }
+            g.setColor(c);
+            if (c == Color.RED) {
+                g.fillOval(img_walk[(i + CHECK_DISTANCE / 2) % n][1], img_walk[(i + CHECK_DISTANCE / 2) % n][0], 4, 4);
+            } else {
+                g.fillOval(img_walk[(i + CHECK_DISTANCE / 2) % n][1], img_walk[(i + CHECK_DISTANCE / 2) % n][0], 1, 1);
+            }
+        }
+    }
+
     void draw_curves() {
         Graphics g = createFrame("Curves");
 
         int n = img_walk.length;
-        int L = 15;
-        Color c = Color.GREEN;
+        int L = 5;
+        Color c;
         for (int i = 0; i < n; i++) {
             int id_p = i - L;
             if (id_p < 0)
@@ -41,13 +92,11 @@ class Piece {
             double dp_m = slopes[i] - slopes[id_p];
             double dn_m = slopes[id_n] - slopes[i];
 
-            double straight_threshold = 0.3;
-            if (Math.abs(dp_m) < straight_threshold && Math.abs(dn_m) < straight_threshold) {
+            double curve_threshold = 4;
+            if (abs(dp_m) > curve_threshold || abs(dn_m) > curve_threshold) {
+                c = Color.RED;
+            } else {
                 c = Color.WHITE;
-            } else if (dp_m > 0 && dn_m > 0) {
-                c = Color.GREEN;
-            } else if (dp_m < 0 && dn_m < 0) {
-                c = Color.BLUE;
             }
 
             g.setColor(c);
@@ -56,7 +105,7 @@ class Piece {
         }
     }
 
-    void draw_curves_3points_angles_approach() throws Exception {
+    void draw_curves_3points_angles_approach() {
         Graphics g = createFrame("Curves");
 
         int n = img_walk.length;
@@ -79,14 +128,15 @@ class Piece {
             double a1 = Math.atan(m_p);
             double a2 = Math.atan(m_n);
 
-            Color c = a2 < a1 ? Color.GREEN : Color.RED;
+            double threshold = 0.05;
+            Color c = a2 + threshold < a1 ? Color.GREEN : Color.RED;
 
             g.setColor(c);
             g.drawOval(c_x, c_y, 1, 1);
         }
     }
 
-    void draw_curves_slopes_approach() throws Exception {
+    void draw_curves_slopes_approach() {
         Graphics g = createFrame("Curves");
 
         int L = 50;
@@ -115,7 +165,7 @@ class Piece {
         }
     }
 
-    void draw_slopes() throws InterruptedException {
+    void draw_slopes() {
         Graphics g = createFrame("Slopes");
 
         for (int i = 0; i < img_walk.length; i++) {
@@ -137,20 +187,111 @@ class Piece {
             g.drawOval(img_walk[i][1], img_walk[i][0], 1, 1);
 
             int l = width / 10;
-            int steps = width / 8;
-            if ((i + 20) % steps == 0) {
+            int steps = width / 20;
+            if (i % steps == 0) {
                 int y_c = img_walk[i][0];
                 int x_c = img_walk[i][1];
 
-                int d_x = (int) (Math.sqrt((l * l) / (1 + slope * slope)));
+                int d_x = (int) (sqrt((l * l) / (1 + slope * slope)));
                 int d_y = (int) (d_x * slope);
                 g.drawLine(x_c - d_x, y_c - d_y, x_c + d_x, y_c + d_y);
             }
         }
     }
 
+    /**
+     * draw curves based on sudden slopes-change in interval
+     */
+    void draw_curves_based_on_sudden_slopes_change() {
+        Graphics g = createFrame("curves sudden slopes change");
+
+        int n = slopes.length;
+        int WINDOW_SIZE = n / (50 * 2);
+        double SLOPE_CHANGE_THRESHOLD = 15.0d;
+
+        for (int i = WINDOW_SIZE; i < n - WINDOW_SIZE - 1; i++) {
+//            double avg_before = 0;
+//            for (int j = i - WINDOW_SIZE; j < i; j++) {
+//                avg_before += slopes[j];
+//            }
+//            avg_before /= WINDOW_SIZE;
+//
+//            double avg_after = 0;
+//            for (int j = i + 1; j < i + WINDOW_SIZE + 1; j++) {
+//                avg_after += slopes[j];
+//            }
+//            avg_after /= WINDOW_SIZE;
+//
+//            if (abs(avg_after - avg_before) > SLOPE_CHANGE_THRESHOLD) {
+//                g.setColor(Color.RED);
+//                g.fillOval(img_walk[i][1], img_walk[i][0], 1, 1);
+//            }
+            if ((slopes[i - WINDOW_SIZE] - slopes[i + WINDOW_SIZE]) > SLOPE_CHANGE_THRESHOLD) {
+                g.setColor(Color.RED);
+                g.fillOval(img_walk[i][1], img_walk[i][0], 1, 1);
+            }
+        }
+
+    }
+
+
+    /**
+     * curves base on delta_slopes averages
+     */
+    void draw_curves_based_on_slopes_avg() {
+        Graphics g = createFrame("curves delta slopes");
+
+        int n = delta_slopes.length;
+        int CHECK_DISTANCE = 1;
+        double COLOR_THRESHOLD = 0.0001;
+        double CURVE_THRESHOLD = 15;
+
+        // AVG in every CHECK_DISTANCE length segment
+        // if everybody within THRESHOLD distance from AVG =>
+        for (int i = 0; i < n - CHECK_DISTANCE - 1; i++) {
+            double segment_sum = 0;
+            for (int j = i; j < i + CHECK_DISTANCE; j++)
+                segment_sum += delta_slopes[j];
+            double avg_delta_slope = segment_sum / CHECK_DISTANCE;
+
+            boolean uniform = true;
+            for (int j = i; j < i + CHECK_DISTANCE && uniform; j++)
+                if (abs(delta_slopes[j] - avg_delta_slope) > CURVE_THRESHOLD)
+                    uniform = false;
+
+            if (uniform) {
+                Color c;
+                double slope_change_at_i = delta_slopes[i + CHECK_DISTANCE / 2];
+                if (slope_change_at_i > COLOR_THRESHOLD)
+                    c = new Color((int) min(255, slope_change_at_i * 1000), 0, 0);
+                else if (slope_change_at_i < -COLOR_THRESHOLD)
+                    c = new Color(0, (int) min(255, slope_change_at_i * -1000), 0);
+                else
+                    c = Color.WHITE;
+
+                g.setColor(c);
+                g.fillOval(img_walk[i + CHECK_DISTANCE / 2][1], img_walk[i + CHECK_DISTANCE / 2][0], 1, 1);
+            }
+        }
+    }
+
+    /**
+     * delta_slopes[i] = slopes[i] - slopes[i - 1]
+     */
+    void compute_delta_slopes() {
+        int n = slopes.length;
+        double delta_slopes[] = new double[n];
+
+        for (int i = 1; i < n; i++) {
+            delta_slopes[i] = slopes[i] - slopes[i - 1];
+        }
+        delta_slopes[0] = slopes[n - 1] - slopes[0];
+        this.delta_slopes = delta_slopes;
+    }
+
     void compute_slopes() {
         int n = img_walk.length;
+        int SLOPE_COMPUTE_LENGTH = n / 50;
         for (int i = 0; i < n; i++) {
             int[] before = img_walk[(i - SLOPE_COMPUTE_LENGTH / 2 + n) % n];
             int[] after = img_walk[(i + SLOPE_COMPUTE_LENGTH / 2) % n];
@@ -221,7 +362,7 @@ class Piece {
         try {
             JFrame frame = new JFrame(text);
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-//        frame.setUndecorated(true);
+            frame.setUndecorated(true);
             frame.setSize(width, height);
             frame.setVisible(true);
             Thread.sleep(100);
