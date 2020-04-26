@@ -1,12 +1,15 @@
 package program;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
@@ -19,9 +22,16 @@ class Piece {
     private int height, width;
     private double[] slopes;
     private double[] delta_slopes;
+    @Setter
+    private int id;
 
     private int[][] img;
     private int[][] img_walk;
+    private List<Integer> corner_ids_on_img_walk;
+    private List<Double> distances_between_corners;
+
+    private int center_y;
+    private int center_x;
 
     Piece(int[][] img) {
         this.img = img;
@@ -30,19 +40,19 @@ class Piece {
     }
 
     /**
-     * draw curves based on normalized distance sum (d^2) / length
+     * find corners based on normalized distance sum (d^2) / length
      * a - starting point of line
      * d - end point of line
      * c - point on puzzle
      * b - point on line for c
      */
-    void draw_corners_based_on_sum_d2_length() {
-        Graphics g = createFrame("corners based on normalized distance sum");
-
+    void find_corner_points_based_on_sum_d2_length() {
+        int n = img_walk.length;
         int CHECK_DISTANCE = 20;
+        int MIN_CORNER_DISTANCE = 100;
         double NORM_D_THRESHOLD = 2.7;
 
-        int n = img_walk.length;
+        List<Pair<Integer, Double>> corner_candidates = new ArrayList<>(100);
         for (int i = 0; i < img_walk.length; i++) {
             double a_y = (double) img_walk[i][0];
             double a_x = (double) img_walk[i][1];
@@ -66,19 +76,84 @@ class Piece {
             }
 
             double normalized_distance_sum = distance_sum / line_length;
-            Color c;
             if (normalized_distance_sum > NORM_D_THRESHOLD) {
-                c = Color.RED;
-            } else {
-                c = Color.WHITE;
-            }
-            g.setColor(c);
-            if (c == Color.RED) {
-                g.fillOval(img_walk[(i + CHECK_DISTANCE / 2) % n][1], img_walk[(i + CHECK_DISTANCE / 2) % n][0], 4, 4);
-            } else {
-                g.fillOval(img_walk[(i + CHECK_DISTANCE / 2) % n][1], img_walk[(i + CHECK_DISTANCE / 2) % n][0], 1, 1);
+                corner_candidates.add(new Pair<>((i + CHECK_DISTANCE / 2) % n, normalized_distance_sum));
             }
         }
+
+        corner_ids_on_img_walk = new ArrayList<>(10);
+        for (int i = 0; i < corner_candidates.size(); i++) {
+            Pair<Integer, Double> ith_potential_corner = corner_candidates.get(i);
+
+            int j = i + 1;
+            boolean same_group = true;
+            while (j < corner_candidates.size() && same_group) {
+                Pair<Integer, Double> jth_potential_corner = corner_candidates.get(j);
+
+                int y_at_imgwalk_j = img_walk[jth_potential_corner.getKey()][0];
+                int x_at_imgwalk_j = img_walk[jth_potential_corner.getKey()][1];
+                int y_at_imgwalk_i = img_walk[ith_potential_corner.getKey()][0];
+                int x_at_imgwalk_i = img_walk[ith_potential_corner.getKey()][1];
+                double distance = sqrt((y_at_imgwalk_i - y_at_imgwalk_j) * (y_at_imgwalk_i - y_at_imgwalk_j) +
+                        (x_at_imgwalk_i - x_at_imgwalk_j) * (x_at_imgwalk_i - x_at_imgwalk_j));
+                if (abs(distance) > MIN_CORNER_DISTANCE) {
+                    same_group = false;
+                } else {
+                    j++;
+                }
+            }
+
+            // group goes from index [i, j - 1) exclusive => find strongest corner from candidates
+            double max_fitness = -1;
+            int id_max_fitness = -1;
+            for (int k = i; k < j; k++) {
+                if (corner_candidates.get(k).getValue() > max_fitness) {
+                    max_fitness = corner_candidates.get(k).getValue();
+                    id_max_fitness = k;
+                }
+            }
+            corner_ids_on_img_walk.add(corner_candidates.get(id_max_fitness).getKey());
+            i = j - 1;
+        }
+        center_y = (int) corner_ids_on_img_walk.stream().mapToInt(i -> img_walk[i][0]).average().getAsDouble();
+        center_x = (int) corner_ids_on_img_walk.stream().mapToInt(i -> img_walk[i][1]).average().getAsDouble();
+    }
+
+    void compute_distances_between_corners() {
+        int corner_count = corner_ids_on_img_walk.size();
+        distances_between_corners = new ArrayList<>(corner_count);
+
+        for (int i = 0; i < corner_count; i++) {
+            double delta_y = img_walk[corner_ids_on_img_walk.get(i)][0] - img_walk[(corner_ids_on_img_walk.get((i + 1) % corner_count))][0];
+            double delta_x = img_walk[corner_ids_on_img_walk.get(i)][1] - img_walk[(corner_ids_on_img_walk.get((i + 1) % corner_count))][1];
+
+            distances_between_corners.add(sqrt(delta_x * delta_x + delta_y * delta_y));
+        }
+    }
+
+    void draw_with_corners() {
+        Graphics g = createFrame("corners: maximum from groups of sum(d^2) / len");
+
+        g.setColor(Color.GREEN);
+        for (int i = 0; i < img_walk.length; i++) {
+            g.fillOval(img_walk[i][1], img_walk[i][0], 1, 1);
+        }
+
+        int R = 12;
+        int corner_id = 0;
+        for (Integer corner_id_on_img_walk : corner_ids_on_img_walk) {
+            g.setColor(Color.RED);
+            int x_corner = img_walk[corner_id_on_img_walk][1] - R / 2;
+            int y_corner = img_walk[corner_id_on_img_walk][0] - R / 2;
+            g.fillOval(x_corner, y_corner, R, R);
+
+            g.setColor(Color.CYAN);
+            g.drawString(Integer.toString(corner_id), x_corner - Integer.signum(x_corner - center_x) * 10, y_corner - Integer.signum(y_corner - center_y) * 10);
+            corner_id++;
+        }
+
+        g.setColor(Color.YELLOW);
+        g.fillOval(center_x, center_y, R, R);
     }
 
     void draw_curves() {
@@ -367,6 +442,7 @@ class Piece {
 
     private Graphics createFrame(String text) {
         try {
+            text = text + " id:" + id;
             JFrame frame = new JFrame(text);
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setUndecorated(true);

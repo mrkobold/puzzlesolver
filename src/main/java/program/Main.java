@@ -8,9 +8,15 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
+
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
+import static java.lang.Math.sqrt;
 
 public class Main {
 
@@ -33,15 +39,113 @@ public class Main {
         // filter out pimples
         double avg_perimeter = pieces.stream().mapToInt(p -> p.getImg().length).average().orElseThrow(() -> new Exception("WTF?? No perimeter of pieces exists??"));
         pieces = pieces.stream().filter(p -> p.getImg().length > avg_perimeter / 3).collect(Collectors.toList());
+        for (int i = 0; i < pieces.size(); i++) {
+            pieces.get(i).setId(i);
+        }
 
 //        pieces.remove(1);
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::compute_slopes);
         pieces.forEach(Piece::compute_delta_slopes);
-        pieces.forEach(Piece::draw_slopes);
+//        pieces.forEach(Piece::draw_slopes);
 //        pieces.forEach(Piece::draw_curves_based_on_slopes_avg);
 //        pieces.forEach(Piece::draw_curves_based_on_sudden_slopes_change);
-        pieces.forEach(Piece::draw_corners_based_on_sum_d2_length);
+//        pieces.forEach(Piece::draw_corners_based_on_sum_d2_length);
+        pieces.forEach(Piece::find_corner_points_based_on_sum_d2_length);
+        pieces.forEach(Piece::draw_with_corners);
+        pieces.forEach(Piece::compute_distances_between_corners);
+
+        List<Double> dist_corners_0 = pieces.get(0).getDistances_between_corners();
+        List<Double> dist_corners_1 = pieces.get(1).getDistances_between_corners();
+
+//        for (int i = 0; i < dist_corners_0.size(); i++) {
+//            double d0 = dist_corners_0.get(i);
+//            for (int j = 0; j < dist_corners_1.size(); j++) {
+//                double d1 = dist_corners_1.get(j);
+//
+//                if (Math.abs(d0 - d1) < 10) {
+//                    System.out.println("piece0:" + i + "-" + (i + 1) + " *** piece1:" + j + "-" + (j + 1));
+//                    tryFit(pieces, i, (i + 1) % dist_corners_0.size(), j, (j + 1) % dist_corners_1.size());
+//                }
+//            }
+//        }
+
+        tryFit(pieces, 0, 3, 3, 2);
+    }
+
+    private static void tryFit(List<Piece> pieces, int a_id, int b_id, int c_id, int d_id) throws InterruptedException {
+        Piece p0 = pieces.get(0);
+        Piece p1 = pieces.get(1);
+        int[][] img_walk_0 = clone_array(p0.getImg_walk());
+        int[][] img_walk_1 = clone_array(p1.getImg_walk());
+
+        int a_id_img_walk = p0.getCorner_ids_on_img_walk().get(a_id);
+        double ya = (double) img_walk_0[a_id_img_walk][0];
+        double xa = (double) img_walk_0[a_id_img_walk][1];
+
+        int b_id_img_walk = p0.getCorner_ids_on_img_walk().get(b_id);
+        double yb = (double) img_walk_0[b_id_img_walk][0];
+        double xb = (double) img_walk_0[b_id_img_walk][1];
+
+
+        int c_id_img_walk = p1.getCorner_ids_on_img_walk().get(c_id);
+        double yc = (double) img_walk_1[c_id_img_walk][0];
+        double xc = (double) img_walk_1[c_id_img_walk][1];
+
+        int d_id_img_walk = p1.getCorner_ids_on_img_walk().get(d_id);
+        double yd = (double) img_walk_1[d_id_img_walk][0];
+        double xd = (double) img_walk_1[d_id_img_walk][1];
+
+        double m0 = (yb - ya) / (xb - xa);
+        double alfa0 = Math.atan(m0); // (-Pi/2, Pi/2)
+
+        double m1 = (yd - yc) / (xd - xc);
+        double alfa1 = Math.atan(m1);
+
+        double rotation_alfa = alfa0 - alfa1;
+        // rotate each pixel's value in img_walk_1 by rotation_alfa around (yc, xc)
+        int[][] img_walk_1_new = new int[img_walk_1.length][img_walk_1[0].length];
+        for (int i = 0; i < img_walk_1.length; i++) {
+            double y = (double) img_walk_1[i][0];
+            double x = (double) img_walk_1[i][1];
+
+            double l = sqrt((y - yc) * (y - yc) + (x - xc) * (x - xc));
+            double original_alfa = Math.atan((y - yc) / (x - xc));
+            double new_alfa = original_alfa + rotation_alfa;
+
+            double new_y = sin(new_alfa) * l + yc;
+            double new_x = cos(new_alfa) * l + xc;
+
+            img_walk_1_new[i][0] = (int) new_y;
+            img_walk_1_new[i][1] = (int) new_x;
+        }
+
+        /// show rotated image
+        IntSummaryStatistics y_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[0]).summaryStatistics();
+        IntSummaryStatistics x_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[1]).summaryStatistics();
+
+        JFrame frame = new JFrame();
+        frame.setSize(x_stat.getMax() - x_stat.getMin(), y_stat.getMax() - y_stat.getMin());
+        frame.setUndecorated(true);
+        frame.setVisible(true);
+        Graphics g = frame.getGraphics();
+        Thread.sleep(100);
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, 1000, 1000);
+        Thread.sleep(100);
+
+        g.setColor(Color.WHITE);
+        for (int i = 0; i < img_walk_1_new.length; i++) {
+            g.fillOval(img_walk_1_new[i][1] - x_stat.getMin(), img_walk_1_new[i][0] - y_stat.getMin(), 1, 1);
+        }
+    }
+
+    private static int[][] clone_array(int[][] original) {
+        int[][] clone = new int[original.length][original[0].length];
+        for (int i = 0; i < original.length; i++) {
+            System.arraycopy(original[i], 0, clone[i], 0, original[0].length);
+        }
+        return clone;
     }
 
     private static int[][] getBlurred(int[][] img) {
