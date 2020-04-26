@@ -12,10 +12,11 @@ import java.util.List;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-import static program.Const.PADDING;
-import static program.Const.TO_BE_VISITED;
-
 public class Main {
+
+    private static final int VISITED = 4;
+    private static final int TO_BE_VISITED = 5;
+    private static final int PADDING = 20;
 
     public static void main(String[] args) throws Exception {
         BufferedImage img = ImageIO.read(new File("photos/resized3.jpg"));
@@ -23,22 +24,21 @@ public class Main {
         int[][] pixels = getPixelsRGB(img);
         int[][] grayScale = getGrayScale(pixels);
         int[][] blurred = getBlurred(grayScale);
-        int[][] binary = getBinary(blurred);
+        int[][] binary = getBinary(grayScale);
         int[][] cleansed = getCleansed(binary);
         int[][] edges = getEdges(cleansed);
 
         List<Piece> pieces = getObjects(edges);
 
         // filter out pimples
-        double avg_perimeter = pieces.stream().mapToInt(p -> p.img.length).average().orElseThrow(() -> new Exception("WTF?? No perimeter of pieces exists??"));
-        pieces = pieces.stream().filter(p -> p.img.length > avg_perimeter / 3).collect(Collectors.toList());
+        double avg_perimeter = pieces.stream().mapToInt(p -> p.getImg().length).average().orElseThrow(() -> new Exception("WTF?? No perimeter of pieces exists??"));
+        pieces = pieces.stream().filter(p -> p.getImg().length > avg_perimeter / 3).collect(Collectors.toList());
 
 //        pieces.remove(1);
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::compute_slopes);
         pieces.forEach(Piece::compute_delta_slopes);
-//        pieces.forEach(Piece::draw_slopes);
-//        pieces.forEach(Piece::draw_slopes);
+        pieces.forEach(Piece::draw_slopes);
 //        pieces.forEach(Piece::draw_curves_based_on_slopes_avg);
 //        pieces.forEach(Piece::draw_curves_based_on_sudden_slopes_change);
         pieces.forEach(Piece::draw_corners_based_on_sum_d2_length);
@@ -80,7 +80,7 @@ public class Main {
                         piece.add(current);
                         int y = current.y;
                         int x = current.x;
-                        img[y][x] = Const.VISITED;
+                        img[y][x] = VISITED;
                         // find size of piece
                         if (miny > y) {
                             miny = y;
@@ -224,31 +224,6 @@ public class Main {
             }
         }
         return grayScalePixels;
-    }
-
-    private static void showImage(Piece p) throws InterruptedException {
-        int[][] pixels = p.img;
-        JFrame frame = new JFrame("preview");
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        frame.setSize(pixels[0].length + 100, pixels.length + 100);
-        frame.setVisible(true);
-        Graphics g = frame.getGraphics();
-        Thread.sleep(100);
-
-        int height = pixels.length;
-        int width = pixels[0].length;
-
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                g.setColor(new Color(pixels[row][col]));
-                g.drawLine(col + 20, row + 60, col + 20, row + 60);
-            }
-        }
-
-        for (int[] corner : p.corners) {
-            g.setColor(Color.RED);
-            g.drawLine(corner[1] + 20, corner[0] + 60, corner[1] + 20, corner[0] + 60);
-        }
     }
 
     private static void showImage(int[][] pixels) throws InterruptedException {

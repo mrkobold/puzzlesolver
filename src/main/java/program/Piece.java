@@ -1,5 +1,7 @@
 package program;
 
+import lombok.Getter;
+
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
 import java.awt.Color;
@@ -9,16 +11,17 @@ import java.util.Arrays;
 import static java.lang.Math.abs;
 import static java.lang.Math.min;
 import static java.lang.Math.sqrt;
-import static program.Const.dirs;
 
+@Getter
 class Piece {
-    int[][] corners = new int[4][2];
-    int height, width;
-    double[] slopes;
-    double[] delta_slopes;
+    private static final int[][] dirs = new int[][]{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
 
-    int[][] img;
-    int[][] img_walk;
+    private int height, width;
+    private double[] slopes;
+    private double[] delta_slopes;
+
+    private int[][] img;
+    private int[][] img_walk;
 
     Piece(int[][] img) {
         this.img = img;
@@ -28,12 +31,16 @@ class Piece {
 
     /**
      * draw curves based on normalized distance sum (d^2) / length
+     * a - starting point of line
+     * d - end point of line
+     * c - point on puzzle
+     * b - point on line for c
      */
     void draw_corners_based_on_sum_d2_length() {
         Graphics g = createFrame("corners based on normalized distance sum");
 
         int CHECK_DISTANCE = 20;
-        double NORM_D_THRESHOLD = 2.8;
+        double NORM_D_THRESHOLD = 2.7;
 
         int n = img_walk.length;
         for (int i = 0; i < img_walk.length; i++) {
@@ -54,8 +61,8 @@ class Piece {
                 double b_x = (m) / (m * m + 1) * (c_y + 1 / m * c_x - a_y + m * a_x);
                 double b_y = a_y + m * (b_x - a_x);
 
-                double dist_squared = sqrt((c_x - b_x) * (c_x - b_x) + (c_y - b_y) * (c_y - b_y));
-                distance_sum += dist_squared;
+                double dist = sqrt((c_x - b_x) * (c_x - b_x) + (c_y - b_y) * (c_y - b_y));
+                distance_sum += dist;
             }
 
             double normalized_distance_sum = distance_sum / line_length;
