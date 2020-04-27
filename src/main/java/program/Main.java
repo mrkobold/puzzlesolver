@@ -109,8 +109,8 @@ public class Main {
             double y = (double) img_walk_1[i][0];
             double x = (double) img_walk_1[i][1];
 
-            double l = sqrt((y - yc) * (y - yc) + (x - xc) * (x - xc));
-            double original_alfa = Math.atan((y - yc) / (x - xc));
+            double l = sqrt(y * y + x * x);
+            double original_alfa = Math.atan(y / x);
             double new_alfa = original_alfa + rotation_alfa;
 
             double new_y = sin(new_alfa) * l + yc;
@@ -120,23 +120,42 @@ public class Main {
             img_walk_1_new[i][1] = (int) new_x;
         }
 
-        /// show rotated image
+
+        /// show piece and rotated image together
+        int rotated_corner_y = img_walk_1_new[c_id_img_walk][0];
+        int rotated_corner_x = img_walk_1_new[c_id_img_walk][1];
+
+        int[][] piece0_walk = p0.getImg_walk();
+        int piece_corner_y = img_walk_0[b_id_img_walk][0];
+        int piece_corner_x = img_walk_0[b_id_img_walk][1];
+
         IntSummaryStatistics y_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[0]).summaryStatistics();
         IntSummaryStatistics x_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[1]).summaryStatistics();
+        int height_rotated = y_stat.getMax() - y_stat.getMin() - 100;
+        int width_rotated = x_stat.getMax() - x_stat.getMin();
 
         JFrame frame = new JFrame();
-        frame.setSize(x_stat.getMax() - x_stat.getMin(), y_stat.getMax() - y_stat.getMin());
+        frame.setSize(width_rotated + p0.getImg()[0].length, height_rotated + p0.getImg().length);
+
         frame.setUndecorated(true);
         frame.setVisible(true);
         Graphics g = frame.getGraphics();
         Thread.sleep(100);
         g.setColor(Color.BLACK);
-        g.fillRect(0, 0, 1000, 1000);
+        g.fillRect(0, 0, 10_000, 10_000);
         Thread.sleep(100);
 
-        g.setColor(Color.WHITE);
+        g.setColor(Color.CYAN);
+        for (int i = 0; i < piece0_walk.length; i++) {
+            g.fillOval(piece0_walk[i][1], piece0_walk[i][0] + height_rotated, 1, 1);
+        }
+
+        int y_offset = piece_corner_y + height_rotated - rotated_corner_y - 5;
+        int x_offset = rotated_corner_x - piece_corner_x + 2 * PADDING;
+
+        g.setColor(Color.BLUE);
         for (int i = 0; i < img_walk_1_new.length; i++) {
-            g.fillOval(img_walk_1_new[i][1] - x_stat.getMin(), img_walk_1_new[i][0] - y_stat.getMin(), 1, 1);
+            g.fillOval(img_walk_1_new[i][1] + x_offset, img_walk_1_new[i][0] + y_offset, 1, 1);
         }
     }
 
