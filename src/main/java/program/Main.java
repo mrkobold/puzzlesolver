@@ -6,7 +6,7 @@ import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static program.FittingUtils.tryFit;
+import static program.FittingUtils.tryHard;
 
 public class Main {
 
@@ -20,9 +20,9 @@ public class Main {
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::find_corner_points_based_on_sum_d2_length);
         pieces.forEach(Piece::draw_with_corners);
-        pieces.forEach(Piece::compute_distances_between_corners);
+        pieces.forEach(Piece::compute_steps_between_corners);
 
-        tryFit(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
+        tryHard(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
     }
 
     private static List<Piece> filterPimples(List<Piece> pieces) throws Exception {

@@ -1,7 +1,6 @@
 package program;
 
 import lombok.Getter;
-import lombok.Setter;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -179,15 +178,12 @@ class Piece {
         center_x = (int) corner_ids_on_img_walk.stream().mapToInt(i -> img_walk[i][1]).average().getAsDouble();
     }
 
-    void compute_distances_between_corners() {
+    void compute_steps_between_corners() {
         int corner_count = corner_ids_on_img_walk.size();
         distances_between_corners = new ArrayList<>(corner_count);
 
         for (int i = 0; i < corner_count; i++) {
-            double delta_y = img_walk[corner_ids_on_img_walk.get(i)][0] - img_walk[(corner_ids_on_img_walk.get((i + 1) % corner_count))][0];
-            double delta_x = img_walk[corner_ids_on_img_walk.get(i)][1] - img_walk[(corner_ids_on_img_walk.get((i + 1) % corner_count))][1];
-
-            distances_between_corners.add(sqrt(delta_x * delta_x + delta_y * delta_y));
+            distances_between_corners.add((double) Math.abs(corner_ids_on_img_walk.get(i) - corner_ids_on_img_walk.get((i + 1) % corner_count)));
         }
     }
 
