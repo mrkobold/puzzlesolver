@@ -22,8 +22,6 @@ class Piece {
     private int height, width;
     private double[] slopes;
     private double[] delta_slopes;
-    @Setter
-    private int id;
 
     private int[][] img;
     private int[][] img_walk;
@@ -37,6 +35,68 @@ class Piece {
         this.img = img;
         height = img.length;
         width = img[0].length;
+    }
+
+    /**
+     * record path of perimeter
+     */
+    void walk() {
+        // will hold the starting point of the walk around perimeter
+        int s_y = -1, s_x = -1;
+        boolean found_s = false;
+        for (int y = 0; y < height && !found_s; y++) {
+            for (int x = 0; x < width && !found_s; x++) {
+                if (img[y][x] == 255) {
+                    s_y = y;
+                    s_x = x;
+                    found_s = true;
+                }
+            }
+        }
+
+        // walk around the shape starting at (s_y, s_x)
+        int p_y = s_y, p_x = s_x; // previous pixel
+
+        int dir = 0;
+        int n_y = s_y, n_x = s_x; // next pixel
+        while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x)) {
+            n_y = s_y + dirs[dir][0];
+            n_x = s_x + dirs[dir][1];
+            dir = (dir + 1) % 8;
+        }
+        dir = (dir + 6) % 8;
+
+        int c_y = n_y, c_x = n_x; // current pixel
+
+        int[][] img_cleansed = new int[height][width];
+        int[][] img_walkk = new int[10 * (height + width)][2];
+        int curr_pix = 0;
+
+        while (c_y != s_y || c_x != s_x) {
+            c_y = n_y;
+            c_x = n_x;
+
+            // collect data
+            img_cleansed[c_y][c_x] = 255;
+            img_walkk[curr_pix][0] = c_y;
+            img_walkk[curr_pix][1] = c_x;
+            curr_pix++;
+            // collected data
+
+            while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x) || (n_y == c_y && n_x == c_x)) {
+                n_y = c_y + dirs[dir][0];
+                n_x = c_x + dirs[dir][1];
+                dir = (dir + 1) % 8;
+            }
+            dir = (dir + 6) % 8;
+            p_y = c_y;
+            p_x = c_x;
+        }
+
+        // save collected data
+        img = Arrays.copyOfRange(img_cleansed, 0, curr_pix);
+        this.img_walk = Arrays.copyOfRange(img_walkk, 0, curr_pix);
+        slopes = new double[curr_pix];
     }
 
     /**
@@ -381,68 +441,8 @@ class Piece {
         }
     }
 
-    void walk() {
-        // will hold the starting point of the walk around perimeter
-        int s_y = -1, s_x = -1;
-        boolean found_s = false;
-        for (int y = 0; y < height && !found_s; y++) {
-            for (int x = 0; x < width && !found_s; x++) {
-                if (img[y][x] == 255) {
-                    s_y = y;
-                    s_x = x;
-                    found_s = true;
-                }
-            }
-        }
-
-        // walk around the shape starting at (s_y, s_x)
-        int p_y = s_y, p_x = s_x; // previous pixel
-
-        int dir = 0;
-        int n_y = s_y, n_x = s_x; // next pixel
-        while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x)) {
-            n_y = s_y + dirs[dir][0];
-            n_x = s_x + dirs[dir][1];
-            dir = (dir + 1) % 8;
-        }
-        dir = (dir + 6) % 8;
-
-        int c_y = n_y, c_x = n_x; // current pixel
-
-        int[][] img_cleansed = new int[height][width];
-        int[][] img_walkk = new int[10 * (height + width)][2];
-        int curr_pix = 0;
-
-        while (c_y != s_y || c_x != s_x) {
-            c_y = n_y;
-            c_x = n_x;
-
-            // collect data
-            img_cleansed[c_y][c_x] = 255;
-            img_walkk[curr_pix][0] = c_y;
-            img_walkk[curr_pix][1] = c_x;
-            curr_pix++;
-            // collected data
-
-            while (img[n_y][n_x] != 255 || (n_y == p_y && n_x == p_x) || (n_y == c_y && n_x == c_x)) {
-                n_y = c_y + dirs[dir][0];
-                n_x = c_x + dirs[dir][1];
-                dir = (dir + 1) % 8;
-            }
-            dir = (dir + 6) % 8;
-            p_y = c_y;
-            p_x = c_x;
-        }
-
-        // save collected data
-        img = Arrays.copyOfRange(img_cleansed, 0, curr_pix);
-        this.img_walk = Arrays.copyOfRange(img_walkk, 0, curr_pix);
-        slopes = new double[curr_pix];
-    }
-
     private Graphics createFrame(String text) {
         try {
-            text = text + " id:" + id;
             JFrame frame = new JFrame(text);
             frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             frame.setUndecorated(true);
