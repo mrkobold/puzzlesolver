@@ -12,47 +12,77 @@ import static java.lang.Math.sqrt;
 
 class FittingUtils {
 
-    static void tryHard(Piece p0, Piece p1, int c00_name, int c01_name, int c10_name, int c11_name) throws InterruptedException {
+    static double tryHard(Piece p0, Piece p1, int c00_name, int c01_name, int c10_name, int c11_name) throws InterruptedException {
         int[][] img_walk_0 = clone_array(p0.getImg_walk());
         int[][] img_walk_1 = clone_array(p1.getImg_walk());
 
         // get coordinates of to-be-matched corners
-        int c11_id_img_walk = p0.getCorner_ids_on_img_walk().get(c00_name);
-        double y00 = (double) img_walk_0[c11_id_img_walk][0];
-        double x00 = (double) img_walk_0[c11_id_img_walk][1];
+        int c00_id_img_walk = p0.getCorner_ids_on_img_walk().get(c00_name);
+        double y00 = (double) img_walk_0[c00_id_img_walk][0];
+        double x00 = (double) img_walk_0[c00_id_img_walk][1];
 
-        int c12_id_img_walk = p0.getCorner_ids_on_img_walk().get(c01_name);
-        double y01 = (double) img_walk_0[c12_id_img_walk][0];
-        double x01 = (double) img_walk_0[c12_id_img_walk][1];
+        int c01_id_img_walk = p0.getCorner_ids_on_img_walk().get(c01_name);
+        double y01 = (double) img_walk_0[c01_id_img_walk][0];
+        double x01 = (double) img_walk_0[c01_id_img_walk][1];
 
-        int c21_id_img_walk = p1.getCorner_ids_on_img_walk().get(c10_name);
-        double y10 = (double) img_walk_1[c21_id_img_walk][0];
-        double x10 = (double) img_walk_1[c21_id_img_walk][1];
+        int c10_id_img_walk = p1.getCorner_ids_on_img_walk().get(c10_name);
+        double y10 = (double) img_walk_1[c10_id_img_walk][0];
+        double x10 = (double) img_walk_1[c10_id_img_walk][1];
 
-        int d_id_img_walk = p1.getCorner_ids_on_img_walk().get(c11_name);
-        double y11 = (double) img_walk_1[d_id_img_walk][0];
-        double x11 = (double) img_walk_1[d_id_img_walk][1];
-
-        // check if need to re-order
-        double yc0 = p0.getCenter_y();
-        double xc0 = p0.getCenter_x();
+        int c11_id_img_walk = p1.getCorner_ids_on_img_walk().get(c11_name);
+        double y11 = (double) img_walk_1[c11_id_img_walk][0];
+        double x11 = (double) img_walk_1[c11_id_img_walk][1];
 
         // compute rotation angle of p1
         double p1_rotation_alfa = computeRotationAlfa(y00, x00, y01, x01, y10, x10, y11, x11);
 
-        // rotate each pixel's value in img_walk_1 by p1_rotation_alfa around (y10, x10)
+        // rotate img_walk_1 by p1_rotation_alfa around (y10, x10)
         int[][] img_walk_1_new = getP1RotatedWalk(img_walk_1, y10, x10, p1_rotation_alfa);
 
         // get rotated corner (y10, x10) of p1
-        int rotated_corner_y = img_walk_1_new[c21_id_img_walk][0];
-        int rotated_corner_x = img_walk_1_new[c21_id_img_walk][1];
+        int rotated_corner_y = img_walk_1_new[c10_id_img_walk][0];
+        int rotated_corner_x = img_walk_1_new[c10_id_img_walk][1];
 
         // get corner (y01, x01) of p0
         int[][] piece0_walk = p0.getImg_walk();
-        int piece_corner_y = img_walk_0[c12_id_img_walk][0];
-        int piece_corner_x = img_walk_0[c12_id_img_walk][1];
+        int piece_corner_y = img_walk_0[c01_id_img_walk][0];
+        int piece_corner_x = img_walk_0[c01_id_img_walk][1];
 
-        // TODO EXPERIMENTAL build frame for visualization
+        // count steps on pieces between said corners
+        double stepsP0 = Math.abs(c00_id_img_walk - c01_id_img_walk);
+        double stepsP1 = Math.abs(c10_id_img_walk - c11_id_img_walk);
+
+        double proportionStepsP0P1 = stepsP0 / stepsP1;
+        if (proportionStepsP0P1 > 1.05d || proportionStepsP0P1 < 0.95d) {
+            return -1.0d;
+        }
+
+        double proportion = stepsP1 / stepsP0;
+        // step proportionally and sum distances
+        double sumDistances = 0.0d;
+        for (int i = 0; i < stepsP0; i++) {
+            // point on static piece
+            int i1 = (c00_id_img_walk + i) % p0.getImg_walk().length;
+            double y0 = img_walk_0[i1][0];
+            double x0 = img_walk_0[i1][1];
+
+            // point on rotated piece
+            // move to same canvas y1 and x1
+            double y1 = img_walk_0[(int) (c11_id_img_walk + i * proportion) % p1.getImg_walk().length][0];
+            double x1 = img_walk_0[(int) (c11_id_img_walk + i * proportion) % p1.getImg_walk().length][1];
+
+            sumDistances += sqrt((y1 - y0) * (y1 - y0) + (x1 - x0) * (x1 - x0));
+        }
+
+        // return sum distances / steps count
+        double differenceNormalized = sumDistances / stepsP0;
+        if (differenceNormalized < 200) {
+            drawFittedPieces(p0, img_walk_1_new, rotated_corner_y, rotated_corner_x, piece0_walk, piece_corner_y, piece_corner_x);
+        }
+        return differenceNormalized;
+    }
+
+    private static void drawFittedPieces(Piece p0, int[][] img_walk_1_new, int rotated_corner_y, int rotated_corner_x, int[][] piece0_walk, int piece_corner_y, int piece_corner_x) throws InterruptedException {
         IntSummaryStatistics y_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[0]).summaryStatistics();
         IntSummaryStatistics x_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[1]).summaryStatistics();
         int height_p1 = y_stat.getMax() - y_stat.getMin() - 100;
@@ -73,7 +103,7 @@ class FittingUtils {
         }
 
         int y_offset = height_p1 - rotated_corner_y + piece_corner_y;
-        int x_offset = - rotated_corner_x + piece_corner_x;
+        int x_offset = -rotated_corner_x + piece_corner_x;
 
         g.setColor(Color.BLUE);
         for (int i = 0; i < img_walk_1_new.length; i++) {

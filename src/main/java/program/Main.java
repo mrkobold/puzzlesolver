@@ -22,7 +22,12 @@ public class Main {
         pieces.forEach(Piece::draw_with_corners);
         pieces.forEach(Piece::compute_steps_between_corners);
 
-        tryHard(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+//                double score = tryHard(pieces.get(0), pieces.get(1), (i + 1) % 4, i,(j + 1) % 4, j);
+                double score = tryHard(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
+            }
+        }
     }
 
     private static List<Piece> filterPimples(List<Piece> pieces) throws Exception {
