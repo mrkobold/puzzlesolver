@@ -24,8 +24,8 @@ public class Main {
 
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-//                double score = tryHard(pieces.get(0), pieces.get(1), (i + 1) % 4, i,(j + 1) % 4, j);
-                double score = tryHard(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
+                double score = tryHard(pieces.get(0), pieces.get(1), (i + 1) % 4, i,(j + 1) % 4, j);
+//                double score = tryHard(pieces.get(0), pieces.get(1), 0, 3, 3, 2);
             }
         }
     }
