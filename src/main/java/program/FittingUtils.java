@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.IntSummaryStatistics;
 
 import static java.lang.Math.cos;
+import static java.lang.Math.pow;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
@@ -33,11 +34,18 @@ class FittingUtils {
         double y11 = (double) img_walk_1[c11_id_img_walk][0];
         double x11 = (double) img_walk_1[c11_id_img_walk][1];
 
+        // if Euler dist delta is too big => return
+        double distanceP0Corners = sqrt(pow(y00 - y01, 2) + pow(x00 - x01, 2));
+        double distanceP1Corners = sqrt(pow(y10 - y11, 2) + pow(x10 - x11, 2));
+        if (distanceP0Corners / distanceP1Corners > 1.01 || distanceP0Corners / distanceP1Corners < 0.99) {
+            return -1.0;
+        }
+
         // compute rotation angle of p1
         double rotation_alfa = computeRotationAlfa(y00, x00, y01, x01, y10, x10, y11, x11);
 
         // rotate img_walk_1 by rotation_alfa around (y10, x10)
-        int[][] img_walk_1_new = getP1RotatedWalk(img_walk_1, y10, x10, rotation_alfa);
+        int[][] img_walk_1_new = getP1RotatedWalk(img_walk_1, p1.getCenter_y(), p1.getCenter_x(), rotation_alfa);
 
         // get rotated-around corner (y10, x10) of p1
         int rotated_corner_y = img_walk_1_new[c10_id_img_walk][0];
@@ -49,9 +57,10 @@ class FittingUtils {
         int static_corner_x = img_walk_0[c01_id_img_walk][1];
 
         // count steps on pieces between said corners
-        double stepsP0 = Math.abs(c00_id_img_walk - c01_id_img_walk);
-        double stepsP1 = Math.abs(c10_id_img_walk - c11_id_img_walk);
+        double stepsP0 = Math.abs(img_walk_0.length + c00_id_img_walk - c01_id_img_walk) % img_walk_0.length;
+        double stepsP1 = Math.abs(img_walk_1.length + c10_id_img_walk - c11_id_img_walk) % img_walk_1.length;
 
+        // if steps dist delta is too big => return
         double proportionStepsP0P1 = stepsP0 / stepsP1;
         if (proportionStepsP0P1 > 1.05d || proportionStepsP0P1 < 0.95d) {
             return -1.0d;
@@ -60,9 +69,9 @@ class FittingUtils {
         double proportion = stepsP0 < stepsP1 ? stepsP1 / stepsP0 : stepsP0 / stepsP1;
         // step proportionally and sum distances
         double sumDistances = 0.0d;
-        for (int i = 0; i < (stepsP0 < stepsP1 ? stepsP1 : stepsP0); i++) {
+        for (int i = 0; i < (stepsP0 < stepsP1 ? stepsP0 : stepsP1); i++) {
             // point on static piece
-            int i1 = (c00_id_img_walk + i) % p0.getImg_walk().length;
+            int i1 = (c00_id_img_walk - i + p0.getImg_walk().length) % p0.getImg_walk().length;
             double y0 = img_walk_0[i1][0];
             double x0 = img_walk_0[i1][1];
 
@@ -74,12 +83,13 @@ class FittingUtils {
             double x1 = img_walk_1_new[(int) (c11_id_img_walk + i * proportion) % lengthP1][1]
                     - rotated_corner_x + static_corner_x; // adjust so that they're a bit farther
 
-            sumDistances += sqrt((y1 - y0) * (y1 - y0) + (x1 - x0) * (x1 - x0));
+            double increment = sqrt((y1 - y0) * (y1 - y0) + (x1 - x0) * (x1 - x0));
+            sumDistances += increment;
         }
 
         // return sum distances / steps count
         double differenceNormalized = sumDistances / (stepsP0 < stepsP1 ? stepsP0 : stepsP1);
-        if (differenceNormalized < 300) {
+        if (differenceNormalized < 20) {
             drawFittedPieces(p0, img_walk_1_new, rotated_corner_y, rotated_corner_x, piece0_walk, static_corner_y, static_corner_x);
         }
         return differenceNormalized;
@@ -102,10 +112,10 @@ class FittingUtils {
 
         g.setColor(Color.CYAN);
         for (int i = 0; i < piece0_walk.length; i++) {
-            g.fillOval(piece0_walk[i][1], piece0_walk[i][0] + height_p1, 1, 1);
+            g.fillOval(piece0_walk[i][1], piece0_walk[i][0] + height_p1 / 4, 1, 1);
         }
 
-        int y_offset = height_p1 - rotated_corner_y + static_corner_y;
+        int y_offset = height_p1 / 4 - rotated_corner_y + static_corner_y;
         int x_offset = -rotated_corner_x + static_corner_x;
 
         g.setColor(Color.BLUE);
@@ -114,18 +124,25 @@ class FittingUtils {
         }
     }
 
-    private static int[][] getP1RotatedWalk(int[][] img_walk_1, double y10, double x10, double p1_rotation_alfa) {
+    private static int[][] getP1RotatedWalk(int[][] img_walk_1, double yc, double xc, double p1_rotation_alfa) {
         int[][] img_walk_1_new = new int[img_walk_1.length][img_walk_1[0].length];
+
+        double l = sqrt(yc * yc + xc * xc);
+        double original_alfa = Math.atan(yc / xc);
+        double new_alfa = original_alfa + p1_rotation_alfa;
+        double offsetCenterY = sin(new_alfa) * l - yc;
+        double offsetCenterX = cos(new_alfa) * l - xc;
+
         for (int i = 0; i < img_walk_1.length; i++) {
             double y = (double) img_walk_1[i][0];
             double x = (double) img_walk_1[i][1];
 
-            double l = sqrt(y * y + x * x);
-            double original_alfa = Math.atan(y / x);
-            double new_alfa = original_alfa + p1_rotation_alfa;
+            l = sqrt(y * y + x * x);
+            original_alfa = Math.atan(y / x);
+            new_alfa = original_alfa + p1_rotation_alfa;
 
-            double new_y = sin(new_alfa) * l + y10;
-            double new_x = cos(new_alfa) * l + x10;
+            double new_y = sin(new_alfa) * l - offsetCenterY;
+            double new_x = cos(new_alfa) * l - offsetCenterX;
 
             img_walk_1_new[i][0] = (int) new_y;
             img_walk_1_new[i][1] = (int) new_x;

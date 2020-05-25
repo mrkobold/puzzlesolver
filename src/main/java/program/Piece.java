@@ -1,6 +1,7 @@
 package program;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.JFrame;
 import javax.swing.WindowConstants;
@@ -17,6 +18,9 @@ import static java.lang.Math.sqrt;
 @Getter
 class Piece {
     private static final int[][] dirs = new int[][]{{-1, 0}, {-1, 1}, {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}};
+
+    @Setter
+    private int id;
 
     private int height, width;
     private double[] slopes;
@@ -109,7 +113,7 @@ class Piece {
         int n = img_walk.length;
         int CHECK_DISTANCE = 20;
         int MIN_CORNER_DISTANCE = 100;
-        double NORM_D_THRESHOLD = 2.7;
+        double NORM_D_THRESHOLD = 2.6;
 
         List<Pair<Integer, Double>> corner_candidates = new ArrayList<>(100);
         for (int i = 0; i < img_walk.length; i++) {
@@ -188,7 +192,11 @@ class Piece {
     }
 
     void draw_with_corners() {
-        Graphics g = createFrame("corners: maximum from groups of sum(d^2) / len");
+        draw_with_corners(this.img_walk);
+    }
+
+    void draw_with_corners(int[][] img_walk) {
+        Graphics g = createFrame("id: " + id + " corners: maximum from groups of sum(d^2) / len");
 
         g.setColor(Color.GREEN);
         for (int i = 0; i < img_walk.length; i++) {
