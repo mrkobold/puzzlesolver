@@ -191,11 +191,11 @@ class Piece {
         }
     }
 
-    void draw_with_corners() {
-        draw_with_corners(this.img_walk);
+    Graphics draw_with_corners() {
+        return draw_with_corners(this.img_walk);
     }
 
-    void draw_with_corners(int[][] img_walk) {
+    Graphics draw_with_corners(int[][] img_walk) {
         Graphics g = createFrame("id: " + id + " corners: maximum from groups of sum(d^2) / len");
 
         g.setColor(Color.GREEN);
@@ -218,6 +218,8 @@ class Piece {
 
         g.setColor(Color.YELLOW);
         g.fillOval(center_x, center_y, R, R);
+
+        return g;
     }
 
     void draw_curves() {

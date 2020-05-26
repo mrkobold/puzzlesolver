@@ -13,6 +13,10 @@ import static java.lang.Math.sqrt;
 
 class FittingUtils {
 
+    private static final double VERY_OFF_DELTA = 50;
+    private static final double VERY_OFF_COUNT = 150;
+    private static final double MINI_ADJUST = 2;
+
     static double tryHard(Piece p0, Piece p1, int c00_name, int c01_name, int c10_name, int c11_name) throws InterruptedException {
         int[][] img_walk_0 = clone_array(p0.getImg_walk());
         int[][] img_walk_1 = clone_array(p1.getImg_walk());
@@ -37,7 +41,7 @@ class FittingUtils {
         // if Euler dist delta is too big => return
         double distanceP0Corners = sqrt(pow(y00 - y01, 2) + pow(x00 - x01, 2));
         double distanceP1Corners = sqrt(pow(y10 - y11, 2) + pow(x10 - x11, 2));
-        if (distanceP0Corners / distanceP1Corners > 1.01 || distanceP0Corners / distanceP1Corners < 0.99) {
+        if (distanceP0Corners / distanceP1Corners > 1.15 || distanceP0Corners / distanceP1Corners < 0.85) {
             return -1.0;
         }
 
@@ -66,36 +70,90 @@ class FittingUtils {
             return -1.0d;
         }
 
-        double proportion = stepsP0 < stepsP1 ? stepsP1 / stepsP0 : stepsP0 / stepsP1;
         // step proportionally and sum distances
-        double sumDistances = 0.0d;
-        for (int i = 0; i < (stepsP0 < stepsP1 ? stepsP0 : stepsP1); i++) {
-            // point on static piece
-            int i1 = (c00_id_img_walk - i + p0.getImg_walk().length) % p0.getImg_walk().length;
-            double y0 = img_walk_0[i1][0];
-            double x0 = img_walk_0[i1][1];
+        // compute direction (static center) -> (offsetted rotated center)
+        double staticCenterY = p0.getCenter_y();
+        double staticCenterX = p0.getCenter_x();
 
-            // point on rotated piece
-            // move to same canvas y1 and x1
-            int lengthP1 = p1.getImg_walk().length;
-            double y1 = img_walk_1_new[(int) (c11_id_img_walk + i * proportion) % lengthP1][0]
-                    - rotated_corner_y + static_corner_y; // adjust so that they're a bit farther
-            double x1 = img_walk_1_new[(int) (c11_id_img_walk + i * proportion) % lengthP1][1]
-                    - rotated_corner_x + static_corner_x; // adjust so that they're a bit farther
+        double rotatedOffsettedCenterY = p1.getCenter_y() - rotated_corner_y + static_corner_y;
+        double rotatedOffsettedCenterX = p1.getCenter_x() - rotated_corner_x + static_corner_x;
 
-            double increment = sqrt((y1 - y0) * (y1 - y0) + (x1 - x0) * (x1 - x0));
-            sumDistances += increment;
+        double deltaCenterY = rotatedOffsettedCenterY - staticCenterY;
+        double deltaCenterX = rotatedOffsettedCenterX - staticCenterX;
+
+        double alfaCenter = Math.atan(deltaCenterY / deltaCenterX);
+        double miniAdjustY = MINI_ADJUST * sin(alfaCenter);
+        double miniAdjustX = MINI_ADJUST * cos(alfaCenter);
+
+        if (deltaCenterY > 0) {
+            miniAdjustY *= -1;
         }
+        if (deltaCenterX < 0) {
+            miniAdjustX *= -1;
+        }
+
+
+        // TODO invert order if other is shorter than this
+        Graphics g0 = null;
+        Graphics g1 = null;
+//        g0 = p0.draw_with_corners();
+//        g1 = p1.draw_with_corners(img_walk_1_new);
+//        g0.setColor(Color.MAGENTA);
+//        g1.setColor(Color.MAGENTA);
+        double sumDistances =
+                getSumDistances(p0, p1, img_walk_0, img_walk_1_new, c00_id_img_walk, c11_id_img_walk, rotated_corner_y, rotated_corner_x, static_corner_y, static_corner_x, stepsP0, stepsP1, miniAdjustY, miniAdjustX, g0, g1);
 
         // return sum distances / steps count
         double differenceNormalized = sumDistances / (stepsP0 < stepsP1 ? stepsP0 : stepsP1);
-        if (differenceNormalized < 20) {
-            drawFittedPieces(p0, img_walk_1_new, rotated_corner_y, rotated_corner_x, piece0_walk, static_corner_y, static_corner_x);
+        if (differenceNormalized < 5) {
+            drawFittedPieces(p0, img_walk_1_new, rotated_corner_y, rotated_corner_x, piece0_walk, static_corner_y, static_corner_x,
+                    miniAdjustY, miniAdjustX);
         }
         return differenceNormalized;
     }
 
-    private static void drawFittedPieces(Piece p0, int[][] img_walk_1_new, int rotated_corner_y, int rotated_corner_x, int[][] piece0_walk, int static_corner_y, int static_corner_x) throws InterruptedException {
+    private static double getSumDistances(Piece p0, Piece p1, int[][] img_walk_0, int[][] img_walk_1, int c00_id_img_walk, int c11_id_img_walk, int rotated_corner_y, int rotated_corner_x, int static_corner_y, int static_corner_x, double stepsP0, double stepsP1, double miniAdjustY, double miniAdjustX, Graphics g0, Graphics g1) {
+        double sumDistances = 0.0;
+        double stepsProportion = stepsP1 / stepsP0;
+
+        int lengthP1 = p1.getImg_walk().length;
+        int lengthP0 = p0.getImg_walk().length;
+
+        int sameCanvasOffsetY = -rotated_corner_y + static_corner_y;
+        int sameCanvasOffsetX = -rotated_corner_x + static_corner_x;
+        for (int i = 0; i < stepsP0; i++) {
+            // point on static piece
+            int absPos0 = (c00_id_img_walk - i + lengthP0) % lengthP0;
+            double y0 = img_walk_0[absPos0][0];
+            double x0 = img_walk_0[absPos0][1];
+
+            if (g0 != null)
+                g0.drawOval((int) x0, (int) y0, 1, 1);
+
+            // point on rotated piece
+            // move to same canvas y1 and x1
+            int ablPos1 = (c11_id_img_walk + (int) (i * stepsProportion)) % lengthP1;
+            double y1 = img_walk_1[ablPos1][0]
+                    + sameCanvasOffsetY
+                    + miniAdjustY;
+            double x1 = img_walk_1[ablPos1][1]
+                    + sameCanvasOffsetX
+                    + miniAdjustX;
+
+            if (g1 != null)
+                g1.drawOval(img_walk_1[ablPos1][1], img_walk_1[ablPos1][0], 1, 1);
+
+            double increment = sqrt((y1 - y0) * (y1 - y0) + (x1 - x0) * (x1 - x0));
+            sumDistances += increment;
+        }
+        return sumDistances;
+    }
+
+    private static void drawFittedPieces(Piece p0, int[][] img_walk_1_new,
+                                         int rotated_corner_y, int rotated_corner_x,
+                                         int[][] piece0_walk,
+                                         int static_corner_y, int static_corner_x,
+                                         double miniAdjustY, double miniAdjustX) throws InterruptedException {
         IntSummaryStatistics y_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[0]).summaryStatistics();
         IntSummaryStatistics x_stat = Arrays.stream(img_walk_1_new).mapToInt(a -> a[1]).summaryStatistics();
         int height_p1 = y_stat.getMax() - y_stat.getMin() - 100;
@@ -120,7 +178,7 @@ class FittingUtils {
 
         g.setColor(Color.BLUE);
         for (int i = 0; i < img_walk_1_new.length; i++) {
-            g.fillOval(img_walk_1_new[i][1] + x_offset, img_walk_1_new[i][0] + y_offset, 1, 1);
+            g.fillOval(img_walk_1_new[i][1] + x_offset + (int) miniAdjustX, img_walk_1_new[i][0] + y_offset + (int) miniAdjustY, 1, 1);
         }
     }
 
@@ -147,6 +205,29 @@ class FittingUtils {
             img_walk_1_new[i][0] = (int) new_y;
             img_walk_1_new[i][1] = (int) new_x;
         }
+
+        double minY = 0;
+        double minX = 0;
+        for (int[] yx : img_walk_1_new) {
+            if (yx[0] < minY)
+                minY = yx[0];
+            if (yx[1] < minX)
+                minX = yx[1];
+        }
+
+        if (minX < 0) {
+            minX *= -1;
+            minX += 10;
+            for (int i = 0; i < img_walk_1_new.length; i++)
+                img_walk_1_new[i][1] += minX;
+        }
+        if (minY < 0) {
+            minY *= -1;
+            minY += 10;
+            for (int i = 0; i < img_walk_1_new.length; i++)
+                img_walk_1_new[i][0] += minY;
+        }
+
         return img_walk_1_new;
     }
 
