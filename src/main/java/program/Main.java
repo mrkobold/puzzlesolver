@@ -22,7 +22,7 @@ public class Main {
 
         pieces.forEach(Piece::walk);
         pieces.forEach(Piece::find_corner_points_based_on_sum_d2_length);
-//        pieces.forEach(Piece::draw_with_corners);
+        pieces.forEach(Piece::draw_with_corners);
         pieces.forEach(Piece::compute_steps_between_corners);
 
         for (int i = 0; i < pieces.size(); i++) {

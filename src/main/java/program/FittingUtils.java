@@ -105,7 +105,7 @@ class FittingUtils {
 
         // return sum distances / steps count
         double differenceNormalized = sumDistances / (stepsP0 < stepsP1 ? stepsP0 : stepsP1);
-        if (differenceNormalized < 5) {
+        if (differenceNormalized < 10) {
             drawFittedPieces(p0, img_walk_1_new, rotated_corner_y, rotated_corner_x, piece0_walk, static_corner_y, static_corner_x,
                     miniAdjustY, miniAdjustX);
         }
@@ -231,12 +231,22 @@ class FittingUtils {
         return img_walk_1_new;
     }
 
-    private static double computeRotationAlfa(double y11, double x11, double y12, double x12, double y21, double x21, double y22, double x22) {
-        double m0 = (y12 - y11) / (x12 - x11);
-        double alfa0 = Math.atan(m0);
-        double m1 = (y22 - y21) / (x22 - x21);
-        double alfa1 = Math.atan(m1);
+    private static double computeRotationAlfa(double y00, double x00, double y01, double x01,
+                                              double y10, double x10, double y11, double x11) {
+        double alfa0 = getAlfaFromEndpoints(y00, x00, y01, x01);
+        double alfa1 = getAlfaFromEndpoints(y11, x11, y10, x10);
         return alfa0 - alfa1;
+    }
+
+    private static double getAlfaFromEndpoints(double y00, double x00, double y01, double x01) {
+        double m0 = (y01 - y00) / (x01 - x00);
+        double alfa0 = Math.atan(m0);
+        if (y01 <= y00 && x01 <= x00) {
+            alfa0 += Math.PI;
+        } else if (y01 >= y00 && x01 <= x00) {
+            alfa0 += Math.PI;
+        }
+        return alfa0;
     }
 
     private static int[][] clone_array(int[][] original) {
